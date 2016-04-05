@@ -35,13 +35,13 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 	int x = threadIdx.x;
 	int y = blockIdx.x;
 	int maxim = 0; int maxint;
-	if (y != 0 && y != sizey && x != 0 && x != sizex)
+	/*if (y != 0 && y != sizey && x != 0 && x != sizex)
 	{
 
 		if (image[(y - 1)*sizex + x - 1] - image[y*sizex + x] > maxim)
 		{
 			maxim = image[(y - 1)*sizex + x - 1] - image[y*sizex + x];
-			maxint = 2*pic;
+			maxint = pic+pic/2+pic/4;
 		}
 
 		if (image[(y - 1)*sizex + x] - image[y*sizex + x] > maxim)
@@ -84,10 +84,38 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 			maxim = image[(y + 1)*sizex + x + 1] - image[y*sizex + x];
 			maxint = pic+pic/2;
 		}
-	}
+	}*/
 	//cont[3 * (y*sizex + x)] = maxim;
-	cont[3 * (y*sizex + x) + 1] = sinf(maxint) * 255;
+	//cont[3 * (y*sizex + x) + 1] = sinf(maxint) * 255;
 	//cont[3 * (y*sizex + x) + 2] = image[y*sizex + x];
+	if (y > rg && y < sizey-rg && x > rg && x < sizex-rg)
+	{
+		float xk = x - rg;
+		float y1 = sqrt((float)(xk*xk + rg*rg));
+		float y2 = -y1;
+		while (xk < x)
+		{
+			float xf = x - 0.5;
+			int xi = int(xf);
+			int yfromx;
+			yfromx = int((xf - xk) * (y1 - y) / (xk - x) + y);
+			while ((image[yfromx*sizex + xi] > image[y*sizex + x]) && (xf > (x - rg)))
+			{
+				xf = xf - 0.5;
+				xi = int(xf);
+				yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
+			}
+			if (xf == x - rg)
+				if (image[yfromx*sizex + xi] > cont[3 * y*sizex + x])
+				{
+					cont[3 * y*sizex + x] = image[yfromx*sizex + xi] - image[y*sizex + x];
+				}
+
+			xk += 0.5;
+			float y1 = sqrtf((float)(xk*xk + rg*rg));
+			float y2 = -y1;
+		}
+	}
 	/*for (int t = y - rg; t < y + rg + 1; t++)
 	{
 
