@@ -35,6 +35,7 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 	int x = threadIdx.x;
 	int y = blockIdx.x;
 	int maxim = 0; int maxint;
+	cont[3*(y*sizex+x)] = 0;
 	/*if (y != 0 && y != sizey && x != 0 && x != sizex)
 	{
 
@@ -86,24 +87,60 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 		}
 	}*/
 	//cont[3 * (y*sizex + x)] = maxim;
-	//cont[3 * (y*sizex + x) + 1] = sinf(maxint) * 255;
+	//cont[3 * (y*sizex + x) + 1] = sin(float(maxint)) * 255;
 	//cont[3 * (y*sizex + x) + 2] = image[y*sizex + x];
 	if (y > rg && y < sizey-rg && x > rg && x < sizex-rg)
 	{
 		float xk = x - rg;
-		float y1 = sqrt((float)(xk*xk + rg*rg));
-		float y2 = -y1;
+		int y1 = int(sqrt(float((rg*rg - xk*xk))));
+		int y2 = -y1;
 		while (xk < x)
 		{
-			float xf = x - 0.5;
+			float xf = x - 0.5; //II
 			int xi = int(xf);
 			int yfromx;
-			yfromx = int((xf - xk) * (y1 - y) / (xk - x) + y);
-			while ((image[yfromx*sizex + xi] > image[y*sizex + x]) && (xf > (x - rg)))
+			yfromx = int(y + y1(1-1/xf));
+			while ((image[yfromx*sizex + xi] > image[y*sizex + x]) && (xi > (x - rg)))
 			{
-				xf = xf - 0.5;
+				xf -= 0.5;
 				xi = int(xf);
-				yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
+				yfromx = int(y + y1(1-1/xf)); //yfromx = int((xf - x2)*(y2 - y1) / (x2 - x1) + y2);
+			}
+			if (xf == x - rg)
+				if (image[yfromx*sizex + xi] > cont[3 * y*sizex + x])
+				{
+					cont[3 * y*sizex + x] = image[yfromx*sizex + xi] - image[y*sizex + x];
+				}
+			
+			xf = x - 0.5; // III
+			xi = int(xf);
+			yfromx = int(y + y2(1-1/xf));
+			while ((image[yfromx*sizex + xi] > image[y*sizex + x]) && (xi > (x - rg)))
+			{
+				xf -= 0.5;
+				xi = int(xf);
+				yfromx = int(y + y2(1-1/xf)); //yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
+			}
+			if (xf == x - rg)
+				if (image[yfromx*sizex + xi] > cont[3 * y*sizex + x])
+				{
+					cont[3 * y*sizex + x] = image[yfromx*sizex + xi] - image[y*sizex + x];
+				}
+		}
+
+		xk = x;
+		y1 = int(sqrt(float((rg*rg - xk*xk))));
+		y2 = -y1;
+		while (xk < x + rg)
+		{
+			xf = x + 0.5; //I
+			xi = int(xf);
+			yfromx = int(y + y1(1-1/xf));
+			while ((image[yfromx*sizex + xi] > image[y*sizex + x]) && (xi < (x + rg)))
+			{
+				xf += 0.5;
+				xi = int(xf);
+				yfromx = int(y + y1(1-1/xf)); //yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
 			}
 			if (xf == x - rg)
 				if (image[yfromx*sizex + xi] > cont[3 * y*sizex + x])
@@ -111,9 +148,24 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 					cont[3 * y*sizex + x] = image[yfromx*sizex + xi] - image[y*sizex + x];
 				}
 
+			xf = x + 0.5; // IV
+			xi = int(xf);
+			yfromx = int(y + y2(1-1/xf));
+			while ((image[yfromx*sizex + xi] > image[y*sizex + x]) && (xi < (x + rg)))
+			{
+				xf += 0.5;
+				xi = int(xf);
+				yfromx = int(y + y2(1-1/xf)); //yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
+			}
+			if (xf == x + rg)
+				if (image[yfromx*sizex + xi] > cont[3 * y*sizex + x])
+				{
+					cont[3 * y*sizex + x] = image[yfromx*sizex + xi] - image[y*sizex + x];
+				}
+
 			xk += 0.5;
-			float y1 = sqrtf((float)(xk*xk + rg*rg));
-			float y2 = -y1;
+			y1 = int(sqrt(float((rg*rg - xk*xk))));
+			y2 = -y1;
 		}
 	}
 	/*for (int t = y - rg; t < y + rg + 1; t++)
@@ -237,78 +289,3 @@ int main()
 	delDev();
 	return 1;
 }
-
-/*
-ParallelDevice::ParallelDevice()
-{
-cudaSetDevice(0);
-}
-
-ParallelDevice::ParallelDevice(int i)
-{
-cudaSetDevice(i);
-}
-
-ParallelDevice::~ParallelDevice()
-{
-cudaDeviceReset();
-}*/
-
-/*	cudaStatus = cudaDeviceSynchronize();
-if (cudaStatus != cudaSuccess) {
-fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-goto Error;
-}*/
-
-/*	cudaStatus = cudaMemcpy(c, dev_c, size * size * sizeof(int), cudaMemcpyDeviceToHost);
-if (cudaStatus != cudaSuccess) {
-fprintf(stderr, "cudaMemcpy failed!");
-goto Error;
-}*/
-
-/*
-Error:
-cudaFree(dev_c);
-cudaFree(dev_a);
-cudaFree(dev_b);
-
-return cudaStatus; */
-
-/*int main()
-{
-const int size = 100; int i, j;
-int a[size][size];
-int b[size][size];
-int c[size][size];
-
-for (i = 0; i < size; i++)
-for (j = 0; j < size; j++)
-{
-a[i][j] = rand()%1000;
-b[i][j] = rand()%1000;
-}
-
-
-for (i = 0; i < size; i++)
-for (j = 0; j < size; j++)
-{
-c[i][j] = 1;
-}
-
-// Add vectors in parallel.
-cudaError_t cudaStatus = addWithCuda(*c, *a, *b, size);
-if (cudaStatus != cudaSuccess) {
-fprintf(stderr, "addWithCuda failed!");
-return 1;
-}
-
-// cudaDeviceReset must be called before exiting in order for profiling and
-// tracing tools such as Nsight and Visual Profiler to show complete traces.
-cudaStatus = cudaDeviceReset();
-if (cudaStatus != cudaSuccess) {
-fprintf(stderr, "cudaDeviceReset failed!");
-return 1;
-}
-
-return 0;
-}*/
