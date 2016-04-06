@@ -35,7 +35,7 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 	int x = threadIdx.x;
 	int y = blockIdx.x;
 	int maxim = 0; int maxint;
-	cont[3*(y*sizex+x)] = 0;
+	//cont[3 * (y*sizex + x)] = 0;
 	/*if (y != 0 && y != sizey && x != 0 && x != sizex)
 	{
 
@@ -87,80 +87,96 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 		}
 	}*/
 	//cont[3 * (y*sizex + x)] = maxim;
-	//cont[3 * (y*sizex + x) + 1] = sin(float(maxint)) * 255;
+	//cont[3 * (y*sizex + x) + 1] = abs(sin(float(maxint))) * 255;
 	//cont[3 * (y*sizex + x) + 2] = image[y*sizex + x];
 	if (y > rg && y < sizey-rg && x > rg && x < sizex-rg)
 	{
-		float xk = x - rg;
+
+
+
+
+
+
+
+
+		float xk = -rg;
 		int y1 = int(sqrt(float((rg*rg - xk*xk))));
 		int y2 = -y1;
-		while (xk < x)
+		while (xk < rg)
 		{
 			float xf = x - 0.5; //II
 			int xi = int(xf);
 			int yfromx;
-			yfromx = int(y + y1(1-1/xf));
+			yfromx = int(y + y1*(1-1/xf));
 			while ((image[yfromx*sizex + xi] > image[y*sizex + x]) && (xi > (x - rg)))
 			{
 				xf -= 0.5;
 				xi = int(xf);
-				yfromx = int(y + y1(1-1/xf)); //yfromx = int((xf - x2)*(y2 - y1) / (x2 - x1) + y2);
+				yfromx = int(y + y1*(1-1/xf)); //yfromx = int((xf - x2)*(y2 - y1) / (x2 - x1) + y2);
 			}
 			if (xf == x - rg)
-				if (image[yfromx*sizex + xi] > cont[3 * y*sizex + x])
+				if (image[yfromx*sizex + xi] > cont[3 * (y*sizex + x)])
 				{
-					cont[3 * y*sizex + x] = image[yfromx*sizex + xi] - image[y*sizex + x];
+					//cont[3 * (y*sizex + x)] = image[yfromx*sizex + xi] - image[y*sizex + x];
+					cont[3 * (y*sizex + x) + 1] = sin(float(pic/2 + pic / 6 * (1 - y1))) * 255;
 				}
 			
 			xf = x - 0.5; // III
 			xi = int(xf);
-			yfromx = int(y + y2(1-1/xf));
+			yfromx = int(y + y2*(1-1/xf));
 			while ((image[yfromx*sizex + xi] > image[y*sizex + x]) && (xi > (x - rg)))
 			{
 				xf -= 0.5;
 				xi = int(xf);
-				yfromx = int(y + y2(1-1/xf)); //yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
+				yfromx = int(y + y2*(1-1/xf)); //yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
 			}
 			if (xf == x - rg)
-				if (image[yfromx*sizex + xi] > cont[3 * y*sizex + x])
+				if (image[yfromx*sizex + xi] > cont[3 * (y*sizex + x)])
 				{
-					cont[3 * y*sizex + x] = image[yfromx*sizex + xi] - image[y*sizex + x];
+					//cont[3 * (y*sizex + x)] = image[yfromx*sizex + xi] - image[y*sizex + x];
+					cont[3 * (y*sizex + x) + 1] = sin(float(pic + pic / 6 * (1 - y1))) * 255;
 				}
+
+			xk += 0.5;
+			y1 = int(sqrt(float((rg*rg - xk*xk))));
+			y2 = -y1;
 		}
 
-		xk = x;
+		xk = 0;
 		y1 = int(sqrt(float((rg*rg - xk*xk))));
 		y2 = -y1;
-		while (xk < x + rg)
+		while (xk < rg)
 		{
-			xf = x + 0.5; //I
-			xi = int(xf);
-			yfromx = int(y + y1(1-1/xf));
+			float xf = x + 0.5; //I
+			int xi = int(xf);
+			int yfromx = int(y + y1*(1-1/xf));
 			while ((image[yfromx*sizex + xi] > image[y*sizex + x]) && (xi < (x + rg)))
 			{
 				xf += 0.5;
 				xi = int(xf);
-				yfromx = int(y + y1(1-1/xf)); //yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
+				yfromx = int(y + y1*(1-1/xf)); //yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
 			}
 			if (xf == x - rg)
-				if (image[yfromx*sizex + xi] > cont[3 * y*sizex + x])
+				if (image[yfromx*sizex + xi] > cont[3 * (y*sizex + x)])
 				{
-					cont[3 * y*sizex + x] = image[yfromx*sizex + xi] - image[y*sizex + x];
+					//cont[3 * (y*sizex + x)] = image[yfromx*sizex + xi] - image[y*sizex + x];
+					cont[3 * (y*sizex + x) + 1] = sin(float(pic / 6 * (1 - y1))) * 255;
 				}
 
 			xf = x + 0.5; // IV
 			xi = int(xf);
-			yfromx = int(y + y2(1-1/xf));
+			yfromx = int(y + y2*(1-1/xf));
 			while ((image[yfromx*sizex + xi] > image[y*sizex + x]) && (xi < (x + rg)))
 			{
 				xf += 0.5;
 				xi = int(xf);
-				yfromx = int(y + y2(1-1/xf)); //yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
+				yfromx = int(y + y2*(1-1/xf)); //yfromx = int((xf - xk)*(y1 - y) / (xk - x) + y);
 			}
 			if (xf == x + rg)
-				if (image[yfromx*sizex + xi] > cont[3 * y*sizex + x])
+				if (image[yfromx*sizex + xi] > cont[3 * (y*sizex + x)])
 				{
-					cont[3 * y*sizex + x] = image[yfromx*sizex + xi] - image[y*sizex + x];
+					//cont[3 * (y*sizex + x)] = image[yfromx*sizex + xi] - image[y*sizex + x];
+					cont[3 * (y*sizex + x) + 1] = sin(float(3* pic / 2 + pic / 6 * (1 - y1))) * 255;
 				}
 
 			xk += 0.5;
@@ -168,6 +184,13 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 			y2 = -y1;
 		}
 	}
+
+	//cont[3 * (y*sizex + x) + 2] = image[y*sizex + x];
+
+
+
+
+
 	/*for (int t = y - rg; t < y + rg + 1; t++)
 	{
 
@@ -248,7 +271,6 @@ void findGrad(char *image, char *cont, unsigned int sizex, unsigned int sizey, i
 	cudaMalloc((void**)&cont_d, sizex * sizey * 3 * sizeof(char));
 
 	cudaMemcpy(gray_d, image, sizex * sizey * sizeof(char), cudaMemcpyHostToDevice);
-
 	GradKernel KERNEL_ARGS2(dim3(sizey), dim3(sizex)) (gray_d, cont_d, sizex, sizey, rg);
 	cudaDeviceSynchronize();
 	cudaMemcpy(cont, cont_d, sizex * sizey * 3 * sizeof(char), cudaMemcpyDeviceToHost);
@@ -266,6 +288,21 @@ int main()
 	std::cout << "gradient radius: "; std::cin >> rg;
 	setDev(0);
 	cont = Mat::Mat(Size(width, height), CV_8UC3);
+	
+	int **sobelx = new int*[rg];
+	for (int i=0; i < rg; i++) sobelx[i] = new int[rg];
+
+	for (int i=0; i < rg; i++)
+		for (int j; j < rg; j++)
+			;
+
+	int **sobely = new int*[rg];
+	for (int i; i < rg; i++) sobely[i] = new int[rg];
+	
+	for (int i = 0; i < floor(rg/2); i++)
+		for (int j=0; j < floor(rg/2); j++)
+			;
+
 	time_t t1;
 	while (1)
 	{
