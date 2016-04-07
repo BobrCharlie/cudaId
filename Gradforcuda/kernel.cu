@@ -14,6 +14,8 @@
 
 using namespace cv;
 
+int sobelx[5][5];
+int sobely[5][5];
 
 void setDev()
 {
@@ -30,12 +32,12 @@ void delDev()
 	cudaDeviceReset();
 }
 
-__global__ void GradKernel(char *image, char *cont, unsigned int sizex, int sizey, int rg) //360/8 x2+y2=r2 r and x
+__global__ void GradKernel(char *image, char *cont, unsigned int sizex, int sizey, int rg, int *sobelx, int *sobely) //360/8 x2+y2=r2 r and x
 {
 	int x = threadIdx.x;
 	int y = blockIdx.x;
 	int maxim = 0; int maxint;
-	//cont[3 * (y*sizex + x)] = 0;
+	cont[3 * (y*sizex + x)] = 0;
 	/*if (y != 0 && y != sizey && x != 0 && x != sizex)
 	{
 
@@ -89,16 +91,45 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 	//cont[3 * (y*sizex + x)] = maxim;
 	//cont[3 * (y*sizex + x) + 1] = abs(sin(float(maxint))) * 255;
 	//cont[3 * (y*sizex + x) + 2] = image[y*sizex + x];
-	if (y > rg && y < sizey-rg && x > rg && x < sizex-rg)
+	
+	
+
+	if (y > 5 && y < sizey - 5 && x > 5 && x < sizex - 5)
 	{
+		int sumx1[5], sumy1[5], sumx, sumy;
+
+		sumx = 0;
+		for (int i = 0; i < 5; i++)
+		{
+			for (int j = 0; j < 5; j++)
+				sumx += image[(y - rg + i)*sizex + (x - rg + j)] * sobelx[i * 5 + j];
+		}
+
+		sumy = 0;
+		for (int i = 0; i < 5; i++)
+		{
+			for (int j = 0; j < 5; j++)
+				sumy += image[(y - rg + i)*sizex + (x - rg + j)] * sobely[i * 5 + j];
+		}
+		cont[3 * (y*sizex + x)] = sumx;
+		cont[3 * (y*sizex + x) + 1] = sumy;
+		if (sumx>0 && sumy>0)
+			cont[3 * (y*sizex + x) + 2] = abs(sin(float(sumy/sqrt(float(sumy*sumy+sumx*sumx))))) * 255;
+		else if (sumx>0 && sumy<0)
+			cont[3 * (y*sizex + x) + 2] = abs(sin(float(pic / 2 + sumy / sqrt(float(sumy*sumy + sumx*sumx))))) * 255;
+		else if (sumx<0 && sumy<0)
+			cont[3 * (y*sizex + x) + 2] = abs(sin(float(pic + sumy / sqrt(float(sumy*sumy + sumx*sumx))))) * 255;
+		else
+			cont[3 * (y*sizex + x) + 2] = abs(sin(float(pic + pic / 2 + sumy / sqrt(float(sumy*sumy + sumx*sumx))))) * 255;
+
+
+	}
 
 
 
 
 
-
-
-
+		/*
 		float xk = -rg;
 		int y1 = int(sqrt(float((rg*rg - xk*xk))));
 		int y2 = -y1;
@@ -118,7 +149,7 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 				if (image[yfromx*sizex + xi] > cont[3 * (y*sizex + x)])
 				{
 					//cont[3 * (y*sizex + x)] = image[yfromx*sizex + xi] - image[y*sizex + x];
-					cont[3 * (y*sizex + x) + 1] = sin(float(pic/2 + pic / 6 * (1 - y1))) * 255;
+					cont[3 * (y*sizex + x) + 1] = sin(float(pic + pic/2 + (rg - y1) / rg)) * 255;
 				}
 			
 			xf = x - 0.5; // III
@@ -134,7 +165,7 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 				if (image[yfromx*sizex + xi] > cont[3 * (y*sizex + x)])
 				{
 					//cont[3 * (y*sizex + x)] = image[yfromx*sizex + xi] - image[y*sizex + x];
-					cont[3 * (y*sizex + x) + 1] = sin(float(pic + pic / 6 * (1 - y1))) * 255;
+					cont[3 * (y*sizex + x) + 1] = sin(float(pic + (rg - y1) / rg)) * 255;
 				}
 
 			xk += 0.5;
@@ -160,7 +191,7 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 				if (image[yfromx*sizex + xi] > cont[3 * (y*sizex + x)])
 				{
 					//cont[3 * (y*sizex + x)] = image[yfromx*sizex + xi] - image[y*sizex + x];
-					cont[3 * (y*sizex + x) + 1] = sin(float(pic / 6 * (1 - y1))) * 255;
+					cont[3 * (y*sizex + x) + 1] = sin(float((rg - y1)/rg)) * 255;
 				}
 
 			xf = x + 0.5; // IV
@@ -176,14 +207,14 @@ __global__ void GradKernel(char *image, char *cont, unsigned int sizex, int size
 				if (image[yfromx*sizex + xi] > cont[3 * (y*sizex + x)])
 				{
 					//cont[3 * (y*sizex + x)] = image[yfromx*sizex + xi] - image[y*sizex + x];
-					cont[3 * (y*sizex + x) + 1] = sin(float(3* pic / 2 + pic / 6 * (1 - y1))) * 255;
+					cont[3 * (y*sizex + x) + 1] = sin(float(pic / 2 + (rg - y1) / rg)) * 255;
 				}
 
 			xk += 0.5;
 			y1 = int(sqrt(float((rg*rg - xk*xk))));
 			y2 = -y1;
 		}
-	}
+	}*/
 
 	//cont[3 * (y*sizex + x) + 2] = image[y*sizex + x];
 
@@ -267,17 +298,41 @@ void findGrad(char *image, char *cont, unsigned int sizex, unsigned int sizey, i
 {
 	char *gray_d;
 	char *cont_d;
+	int *sobelx_d;
+	int *sobely_d;
 	cudaMalloc((void**)&gray_d, sizex * sizey * sizeof(char));
 	cudaMalloc((void**)&cont_d, sizex * sizey * 3 * sizeof(char));
+	cudaMalloc((void**)&sobelx_d, 25 * sizeof(int));
+	cudaMalloc((void**)&sobely_d, 25 * sizeof(int));
 
 	cudaMemcpy(gray_d, image, sizex * sizey * sizeof(char), cudaMemcpyHostToDevice);
-	GradKernel KERNEL_ARGS2(dim3(sizey), dim3(sizex)) (gray_d, cont_d, sizex, sizey, rg);
+	cudaMemcpy(sobelx_d, &sobelx, 25 * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(sobely_d, &sobely, 25 * sizeof(int), cudaMemcpyHostToDevice);
+
+	GradKernel KERNEL_ARGS2(dim3(sizey), dim3(sizex)) (gray_d, cont_d, sizex, sizey, rg, sobelx_d, sobely_d);
 	cudaDeviceSynchronize();
 	cudaMemcpy(cont, cont_d, sizex * sizey * 3 * sizeof(char), cudaMemcpyDeviceToHost);
 
 	cudaFree(cont_d);
 	cudaFree(gray_d);
 }
+
+void initsobel()
+{
+	sobelx[0][0] = -1; sobelx[0][1] = -1; sobelx[0][2] = 0; sobelx[0][3] = 1; sobelx[0][4] = 1;
+	sobelx[1][0] = -2; sobelx[1][1] = -2; sobelx[1][2] = 0; sobelx[1][3] = 2; sobelx[1][4] = 2;
+	sobelx[2][0] = -3; sobelx[2][1] = -6; sobelx[2][2] = 0; sobelx[2][3] = 6; sobelx[2][4] = 3;
+	sobelx[3][0] = -2; sobelx[3][1] = -2; sobelx[3][2] = 0; sobelx[3][3] = 2; sobelx[3][4] = 2;
+	sobelx[4][0] = -1; sobelx[4][1] = -1; sobelx[4][2] = 0; sobelx[4][3] = 1; sobelx[4][4] = 1;
+
+
+	sobely[0][0] = -1; sobely[0][1] = -2; sobely[0][2] = -3; sobely[0][3] = -2; sobely[0][4] = -1;
+	sobely[1][0] = -1; sobely[1][1] = -2; sobely[1][2] = -6; sobely[1][3] = -2; sobely[1][4] = -1;
+	sobely[2][0] = 0; sobely[2][1] = 0; sobely[2][2] = 0; sobely[2][3] = 0; sobely[2][4] = 0;
+	sobely[3][0] = -1; sobely[3][1] = -2; sobely[3][2] = 6; sobely[3][3] = 2; sobely[3][4] = 2;
+	sobely[4][0] = -1; sobely[4][1] = -2; sobely[4][2] = 3; sobely[4][3] = 2; sobely[4][4] = 2;
+}
+
 int main()
 {
 	VideoCapture capture(0);
@@ -288,21 +343,7 @@ int main()
 	std::cout << "gradient radius: "; std::cin >> rg;
 	setDev(0);
 	cont = Mat::Mat(Size(width, height), CV_8UC3);
-	
-	int **sobelx = new int*[rg];
-	for (int i=0; i < rg; i++) sobelx[i] = new int[rg];
-
-	for (int i=0; i < rg; i++)
-		for (int j; j < rg; j++)
-			;
-
-	int **sobely = new int*[rg];
-	for (int i; i < rg; i++) sobely[i] = new int[rg];
-	
-	for (int i = 0; i < floor(rg/2); i++)
-		for (int j=0; j < floor(rg/2); j++)
-			;
-
+	initsobel();
 	time_t t1;
 	while (1)
 	{
